@@ -1,0 +1,157 @@
+---
+- hosts: kurseve
+  tasks:
+      # - name: update apt cache
+      #   become: yes
+      #   apt: update_cache=True
+
+      - name: Installing developer tools
+        become: yes
+        apt: pkg={{ item }} state=latest
+        with_items:
+            - build-essential 
+            - cmake 
+            - git 
+            - pkg-config
+            - wget
+
+      - name: Installing Image I/O packages required by Open-CV
+        become: yes
+        apt: pkg={{ item }} state=latest
+        with_items:
+            - libjpeg8-dev
+            - libtiff5-dev
+            - libjasper-dev
+            - libpng12-dev
+            - libgtk2.0-dev
+            - libavcodec-dev
+            - libavformat-dev
+            - libswscale-dev
+            - libv4l-dev
+            - libatlas-base-dev
+            - gfortran
+            - python2.7-dev
+            - python-pip
+
+      # - name: transfer swap space creation script to the remote
+      #   copy: src=../scripts/createswap.sh dest=/tmp/createswap.sh mode=0777
+
+      # - name: Create swap space for compilation
+      #   become: yes
+      #   command: sh /tmp/createswap.sh
+
+      - name: Install virtualenvwrapper and the helper tools
+        become: yes
+        command: pip install virtualenv virtualenvwrapper
+
+      # TODO: preferred way of putting the required exports in .bashrc would
+      #       check whether the particular lines exist in the file
+      # - name: check whether bashrc already has the necessary exports
+      #   command: awk /^virtualenv$/ /home/vagrant/.bashrc
+      #   register: checkregex_bashrc
+      #   changed_when: False
+
+      # OR
+      # - name: Putting the bin files for virtualenvwrapper inside the .bashrc
+      #   blockinfile:
+      #     path: /home/vagrant/.bashrc
+      #     block: |
+      #       # virtualenv and virtualenvwrapper
+      #       export WORKON_HOME=$HOME/.virtualenvs
+      #       source /usr/local/bin/virtualenvwrapper.sh
+      #   when: (not checkregex_bashrc.stdout | match("virtualenv")
+
+      # - name: Putting the bin files for virtualenvwrapper inside the .bashrc
+      #   command: echo "\n# virtualenv and virtualenvwrapper\nexport WORKON_HOME=$HOME/.virtualenvs\nsource /usr/local/bin/virtualenvwrapper.sh" >> /home/vagrant/.bashrc
+      #   when: (not checkregex_bashrc.stdout | match("virtualenv")
+
+      # NOTE: sourcing the profile would simulate a more realistic local login in the shell than sourcing the .bashrc
+      - name: Putting the bin files for virtualenvwrapper inside the /etc/profile
+        become: yes
+        copy:
+          src: ../files/profile
+          dest: /etc/profile
+          owner: root
+          group: root
+          mode: "u=rw,g=r,o=r"
+
+      # TODO: This doesn't work as it's supposed to http://stackoverflow.com/q/22256884/3834059
+      # - name: sourcing bashrc
+      #   command: source /home/vagrant/.bashrc
+      
+      # NOTE: sourcing it doesn't fix the problem.
+      # - name: Sourcing the /etc/profile
+      #   shell: . /etc/profile
+
+      # - name: check if virtualevn already exists
+      #   stat: path=/home/vagrant/.virtualenvs/cv
+      #   register: checkpath_cv
+
+      # TODO: skipping this part for now
+      # - name: Create a virtualenv
+      #   command: mkvirtualenv cv
+      #   when: checkpath_cv.stat.exists == False
+
+      - name: check if opencv already is cloned
+        stat: path=/home/vagrant/opencv
+        register: checkpath_opencv
+
+      - name: check if opencv_contrib is cloned
+        stat: path=/home/vagrant/opencv_contrib
+        register: checkpath_opencv_contrib
+
+      - name: cloning https://github.com/Itseez/opencv.git 
+        git: 
+            repo: https://github.com/Itseez/opencv.git 
+            dest: /home/vagrant/opencv
+        when: checkpath_opencv.stat.exists == False
+
+      - name: cloning https://github.com/Itseez/opencv_contrib.git in /home/vagrant 
+        git: 
+            repo: https://github.com/Itseez/opencv_contrib.git
+            dest: /home/vagrant/opencv_contrib 
+        when: checkpath_opencv_contrib.stat.exists == False
+
+      - name: changing the tags for opencv dir to 3.0.0
+        command: chdir=/home/vagrant/opencv git checkout 3.0.0
+
+      - name: changing the tags for opencv_contrib dir to 3.0.0
+        command: chdir=/home/vagrant/opencv_contrib git checkout 3.0.0
+
+      - name: check if /home/vagrant/opencv/build already exists
+        shell: "[ -d /home/vagrant/opencv/build ] && echo 'Found' || echo ''"
+        register: opencvbuild_exists
+
+      - name: create opencv/build if it does not exist
+        file: path=/home/vagrant/opencv/build state=directory 
+        when: (not opencvbuild_exists.stdout)  # don't create directory if it already exists
+
+      - name: Running cmake inside "/home/vagrant/opencv/build"
+        command: chdir=/home/vagrant/opencv/build cmake -D CMAKE_BUILD_TYPE=RELEASE -D CMAKE_INSTALL_PREFIX=/usr/local -D INSTALL_C_EXAMPLES=ON -D INSTALL_PYTHON_EXAMPLES=ON -D OPENCV_EXTRA_MODULES_PATH=~/opencv_contrib/modules -D BUILD_EXAMPLES=ON /home/vagrant/opencv
+        # when: (not opencvbuild_exists.stdout)  # don't run cmake if the opencv/build dir already exists
+
+      - name: running make -j4 inside "/home/vagrant/opencv/build"
+        command: chdir=/home/vagrant/opencv/build make -j4
+        # when: (not opencvbuild_exists.stdout)
+
+      - name: running make install inside "/home/vagrant/opencv/build"
+        become: yes
+        command: chdir=/home/vagrant/opencv/build make install
+
+      - name: running ldconfig inside "/home/vagrant/opencv/build"
+        become: yes
+        command: chdir=/home/vagrant/opencv/build ldconfig
+
+      # NOTE: pip searches for the requirements file on the remote machine.
+      - name: Copy pip-requirements.txt to the remote
+        copy: src=../files/pip-requirements dest=/home/vagrant/pip-requirements.txt force=no
+
+      - name: Install pip
+        pip:
+          requirements: /home/vagrant/pip-requirements.txt
+          virtualenv: /home/vagrant/venvs/cv
+          virtualenv_python: python2.7
+
+      # - name: creating a symbolic link for the opencv so file
+      #   command: chdir=/home/vagrant/venvs/cv/lib/python2.7/site-packages ln -s /usr/local/lib/python2.7/site-packages/cv2.so cv2.so 
+
