@@ -37,9 +37,9 @@
   - libatlas-base-dev
   - gfortran
 
-- name: Install Python3 headers and development files
+- name: Install Python2 headers and development files
   become: true
-  apt: name=python3.4-dev
+  apt: name=python-dev
 
 - name: Install unzip
   become: true
@@ -66,7 +66,7 @@
   shell: |
     source /usr/local/bin/virtualenvwrapper.sh
     workon {{ virtualenv_name }}
-    cmake -D CMAKE_BUILD_TYPE=RELEASE -D CMAKE_INSTALL_PREFIX=/usr/local -D INSTALL_C_EXAMPLES=OFF -D INSTALL_PYTHON_EXAMPLES=ON -D OPENCV_EXTRA_MODULES_PATH={{ download_dir }}/opencv_contrib-{{ opencv_version }}/modules -D BUILD_EXAMPLES=ON ..
+    cmake -D CMAKE_BUILD_TYPE=RELEASE -D CMAKE_INSTALL_PREFIX=/usr/local -D INSTALL_C_EXAMPLES=ON -D INSTALL_PYTHON_EXAMPLES=ON -D OPENCV_EXTRA_MODULES_PATH={{ download_dir }}/opencv_contrib-{{ opencv_version }}/modules -D BUILD_EXAMPLES=ON ..
   args:
     chdir: "{{ download_dir }}/opencv-{{ opencv_version }}/build"
     executable: /bin/bash
@@ -102,4 +102,4 @@
   when: tmp.stat.exists == false
 
 - name: Symlink opencv to virtualenv
-  file: path={{ virtualenv_home }}/{{ virtualenv_name }}/lib/python3.4/site-packages/cv2.so src=/usr/local/lib/python3.4/site-packages/cv2.cpython-34m.so state=link
+  file: path={{ virtualenv_home }}/{{ virtualenv_name }}/lib/python2.7/site-packages/cv2.so src=/usr/local/lib/python2.7/site-packages/cv2.so state=link

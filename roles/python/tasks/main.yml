@@ -18,7 +18,7 @@
 
 - name: Install pip
   become: true
-  command: python3 {{ pwd_result.stdout }}/get-pip.py
+  command: python {{ pwd_result.stdout }}/get-pip.py
 
 - name: Remove temporary download directory, if it didn't prevously exist
   file: name={{ download_dir }} state=absent
@@ -26,7 +26,7 @@
 
 - name: Install virtualenv and virtualenvwrapper
   become: true
-  pip: name={{ item }} executable=pip3
+  pip: name={{ item }} executable=pip
   with_items:
   - virtualenv
   - virtualenvwrapper
@@ -40,7 +40,7 @@
     line={{ item }}
     state=present
   with_items:
-  - export VIRTUALENVWRAPPER_PYTHON=/usr/bin/python3
+  - export VIRTUALENVWRAPPER_PYTHON=/usr/bin/python
   - export WORKON_HOME={{ virtualenv_home }}
   - source /usr/local/bin/virtualenvwrapper.sh
 

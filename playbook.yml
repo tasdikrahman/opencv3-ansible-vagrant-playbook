@@ -2,12 +2,12 @@
 - hosts: kurseve
   vars:
     download_dir: ~/downloads
-    opencv_version: 3.1.0
+    opencv_version: 3.0.0
     virtualenv_home: ~/.virtualenvs
     virtualenv_name: cv
     num_processors: 2
   environment:
-    VIRTUALENVWRAPPER_PYTHON: /usr/bin/python3
+    VIRTUALENVWRAPPER_PYTHON: /usr/bin/python
     WORKON_HOME: "{{ virtualenv_home }}"
   roles:
     - update
