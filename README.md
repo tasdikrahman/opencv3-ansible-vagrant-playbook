@@ -36,6 +36,7 @@ Type "help", "copyright", "credits" or "license" for more information.
 
 ## TODO
 
+- [x] ~~Add `python2` support for the vagrant box.~~ Added on [python2](https://github.com/prodicus/opencv3-ansible-vagrant-playbook/tree/python2) branch.
 - [ ] Add shared folders inside for easy access to converted files
 - [ ] Add a GUI instead of a headless vm box for ease of use
 
